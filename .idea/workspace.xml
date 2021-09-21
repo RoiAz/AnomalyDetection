@@ -2,6 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="9e61ece3-c523-43ac-bc56-228ceb6b76f3" name="Changes" comment="Kitsune" />
+    <list default="true" id="9e61ece3-c523-43ac-bc56-228ceb6b76f3" name="Changes" comment="Hershko Net">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/KitNET/OurProject.py" beforeDir="false" afterPath="$PROJECT_DIR$/KitNET/OurProject.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/KitNET/dA.py" beforeDir="false" afterPath="$PROJECT_DIR$/KitNET/dA.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/KitNET/expriement.py" beforeDir="false" afterPath="$PROJECT_DIR$/KitNET/expriement.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -52,7 +58,14 @@
       <option name="project" value="LOCAL" />
       <updated>1632207839463</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Hershko Net">
+      <created>1632211732470</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1632211732470</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -117,7 +130,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="bla" />
     <MESSAGE value="First Try" />
-    <option name="LAST_COMMIT_MESSAGE" value="First Try" />
+    <MESSAGE value="Hershko Net" />
+    <option name="LAST_COMMIT_MESSAGE" value="Hershko Net" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

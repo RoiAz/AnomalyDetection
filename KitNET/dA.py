@@ -52,10 +52,10 @@ class dA:
         self.rng = numpy.random.RandomState(1234)
 
         a = 1. / self.params.n_visible
-        self.W = numpy.array(self.rng.uniform(  # initialize W uniformly
-            low=-a,
-            high=a,
-            size=(self.params.n_visible, self.params.n_hidden)))
+        # self.W = numpy.array(self.rng.uniform(  # initialize W uniformly
+        #     low=-a,
+        #     high=a,
+        #     size=(self.params.n_visible, self.params.n_hidden)))
 
         self.hbias = numpy.zeros(self.params.n_hidden)  # initialize h bias 0
         self.vbias = numpy.zeros(self.params.n_visible)  # initialize v bias 0
