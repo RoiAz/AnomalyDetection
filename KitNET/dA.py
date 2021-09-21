@@ -27,7 +27,7 @@ import sys
 import numpy
 from KitNET.utils import *
 import json
-from KitNET.OurProject import Encoder
+from KitNET.OurProject import Encoder, Decoder, Norm
 
 
 class dA_params:
@@ -47,30 +47,31 @@ class dA:
         if self.params.hiddenRatio is not None:
             self.params.n_hidden = int(numpy.ceil(self.params.n_visible * self.params.hiddenRatio))
 
-        # for 0-1 normlaization
-        self.norm_max = numpy.ones((self.params.n_visible,)) * -numpy.Inf
-        self.norm_min = numpy.ones((self.params.n_visible,)) * numpy.Inf
+        # # for 0-1 normlaization
+        # self.norm_max = numpy.ones((self.params.n_visible,)) * -numpy.Inf
+        # self.norm_min = numpy.ones((self.params.n_visible,)) * numpy.Inf
+        self.norm_func = Norm(self.params.n_visible)
         self.n = 0
 
         self.rng = numpy.random.RandomState(1234)
 
-        # a = 1. / self.params.n_visible
-        # self.W = numpy.array(self.rng.uniform(  # initialize W uniformly
-        #     low=-a,
-        #     high=a,
-        #     size=(self.params.n_visible, self.params.n_hidden)))
+        a = 1. / self.params.n_visible
+        self.W = numpy.array(self.rng.uniform(  # initialize W uniformly
+            low=-a,
+            high=a,
+            size=(self.params.n_visible, self.params.n_hidden)))
 
       #  self.hbias = numpy.zeros(self.params.n_hidden)  # initialize h bias 0
         self.vbias = numpy.zeros(self.params.n_visible)  # initialize v bias 0
         self.W_prime = self.W.T
         self.encoder = Encoder(self.params.n_visible, self.params.n_hidden)
 
-    # def get_corrupted_input(self, input, corruption_level):
-    #     assert corruption_level < 1
-    #
-    #     return self.rng.binomial(size=input.shape,
-    #                              n=1,
-    #                              p=1 - corruption_level) * input
+    def get_corrupted_input(self, input, corruption_level):
+        assert corruption_level < 1
+
+        return self.rng.binomial(size=input.shape,
+                                 n=1,
+                                 p=1 - corruption_level) * input
 
     # Encode
     def get_hidden_values(self, input):
@@ -83,12 +84,14 @@ class dA:
 
     def train(self, x):
         self.n = self.n + 1
-        # update norms
-        self.norm_max[x > self.norm_max] = x[x > self.norm_max]
-        self.norm_min[x < self.norm_min] = x[x < self.norm_min]
+        # # update norms
+        # self.norm_max[x > self.norm_max] = x[x > self.norm_max]
+        # self.norm_min[x < self.norm_min] = x[x < self.norm_min]
+        #
+        # # 0-1 normalize
+        # x = (x - self.norm_min) / (self.norm_max - self.norm_min + 0.0000000000000001)
 
-        # 0-1 normalize
-        x = (x - self.norm_min) / (self.norm_max - self.norm_min + 0.0000000000000001)
+        x = self.norm_func.norm(x)
 
         if self.params.corruption_level > 0.0:
             tilde_x = self.get_corrupted_input(x, self.params.corruption_level)
@@ -97,15 +100,17 @@ class dA:
         y = self.get_hidden_values(tilde_x)
         z = self.get_reconstructed_input(y)
 
+        self.encoder.train(z)
+
         L_h2 = x - z
-        L_h1 = numpy.dot(L_h2, self.W) * y * (1 - y)
+        #L_h1 = numpy.dot(L_h2, self.W) * y * (1 - y)
 
         L_vbias = L_h2
-        L_hbias = L_h1
-        L_W = numpy.outer(tilde_x.T, L_h1) + numpy.outer(L_h2.T, y)
+      #  L_hbias = L_h1
+       # L_W = numpy.outer(tilde_x.T, L_h1) + numpy.outer(L_h2.T, y)
 
-        self.W += self.params.lr * L_W
-        self.hbias += self.params.lr * L_hbias
+      #  self.W += self.params.lr * L_W
+     #   self.hbias += self.params.lr * L_hbias
         self.vbias += self.params.lr * L_vbias
         return numpy.sqrt(numpy.mean(L_h2 ** 2))  # the RMSE reconstruction error during training
 
@@ -118,8 +123,9 @@ class dA:
         if self.n < self.params.gracePeriod:
             return 0.0
         else:
-            # 0-1 normalize
-            x = (x - self.norm_min) / (self.norm_max - self.norm_min + 0.0000000000000001)
+            # # 0-1 normalize
+            # x = (x - self.norm_min) / (self.norm_max - self.norm_min + 0.0000000000000001)
+            x = self.norm_func.norm(x, train_mode=False)
             z = self.reconstruct(x)
             rmse = numpy.sqrt(((x - z) ** 2).mean())  # MSE
             return rmse
