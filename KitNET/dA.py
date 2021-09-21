@@ -54,23 +54,23 @@ class dA:
 
         self.rng = numpy.random.RandomState(1234)
 
-        a = 1. / self.params.n_visible
-        self.W = numpy.array(self.rng.uniform(  # initialize W uniformly
-            low=-a,
-            high=a,
-            size=(self.params.n_visible, self.params.n_hidden)))
+        # a = 1. / self.params.n_visible
+        # self.W = numpy.array(self.rng.uniform(  # initialize W uniformly
+        #     low=-a,
+        #     high=a,
+        #     size=(self.params.n_visible, self.params.n_hidden)))
 
-        self.hbias = numpy.zeros(self.params.n_hidden)  # initialize h bias 0
+      #  self.hbias = numpy.zeros(self.params.n_hidden)  # initialize h bias 0
         self.vbias = numpy.zeros(self.params.n_visible)  # initialize v bias 0
         self.W_prime = self.W.T
         self.encoder = Encoder(self.params.n_visible, self.params.n_hidden)
 
-    def get_corrupted_input(self, input, corruption_level):
-        assert corruption_level < 1
-
-        return self.rng.binomial(size=input.shape,
-                                 n=1,
-                                 p=1 - corruption_level) * input
+    # def get_corrupted_input(self, input, corruption_level):
+    #     assert corruption_level < 1
+    #
+    #     return self.rng.binomial(size=input.shape,
+    #                              n=1,
+    #                              p=1 - corruption_level) * input
 
     # Encode
     def get_hidden_values(self, input):
