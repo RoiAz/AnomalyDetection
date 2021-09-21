@@ -11,5 +11,8 @@ class Encoder:
     def encode(self, input):
         if hp["encoder"] == "Kitsune":
             return sigmoid(numpy.dot(input, self.W) + self.hbias)
+        elif hp["encoder"] == "HerskoNet":
+            pass
+
 
 
