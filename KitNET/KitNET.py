@@ -57,7 +57,7 @@ class KitNET:
 
     #force train KitNET on x
     #returns the anomaly score of x during training (do not use for alerting)
-    def train(self,x):
+    def train(self, x):
         if self.n_trained <= self.FM_grace_period and self.v is None: #If the FM is in train-mode, and the user has not supplied a feature mapping
             #update the incremetnal correlation matrix
             self.FM.update(x)
