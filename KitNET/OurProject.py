@@ -32,7 +32,8 @@ class DecoderCNN(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         modules = []
-        channel_list = [in_channels] + [512] + [256] + [128] + [out_channels]
+    #    channel_list = [in_channels] + [512] + [256] + [128] + [out_channels]
+        channel_list = [in_channels]
 
         for ci in range(1, len(channel_list)):
             if ci == len(channel_list) - 1:
@@ -78,6 +79,7 @@ class autoEncoder:
         self.elr = hp["encoder_lr"]
         self.dlr = hp["decoder_lr"]
         self.input = 0
+        self.L_h2 = 0
         self.encode_output = 0
         self.decode_output = 0
         self.encoder = None

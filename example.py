@@ -22,7 +22,7 @@ with zipfile.ZipFile("mirai.zip","r") as zip_ref:
 
 
 # File location
-path = "mirai_medium.pcap.tsv" #the pcap, pcapng, or tsv file to process.
+path = "mirai.pcap.tsv" #the pcap, pcapng, or tsv file to process.
 packet_limit = np.Inf #the number of packets to process
 
 # KitNET params:

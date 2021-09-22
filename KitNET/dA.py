@@ -83,8 +83,8 @@ class dA:
         return self.autoencoder.decode(hidden)
 
     def train(self, x):
-        print("x " + str(x))
-        print("x shape " + str(x.shape))
+        #print("x " + str(x))
+        #print("x shape " + str(x.shape))
         self.n = self.n + 1
         # # update norms
         # self.norm_max[x > self.norm_max] = x[x > self.norm_max]
