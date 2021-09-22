@@ -23,17 +23,18 @@ class Norm:
             return (x - self.norm_min) / (self.norm_max - self.norm_min + 0.0000000000000001)
 
 
-class Encoder:
+class autoEncoder:
     def __init__(self, n_visible=5, n_hidden=3):
         self.n_visible = n_visible
         self.n_hidden = n_hidden
         self.lr = hp["encoder_lr"]
         self.input = 0
-        self.output = 0
+        self.encode_output = 0
+        self.decode_output = 0
         if hp["encoder"] == "Kitsune":
             a = 1. / self.n_visible
             self.hbias = numpy.zeros(self.n_hidden)  # initialize h bias 0
-            self.vbias = numpy.zeros(self.params.n_visible) # initialize v bias 0
+            self.vbias = numpy.zeros(self.n_visible) # initialize v bias 0
             self.W = numpy.array(rng.uniform(  # initialize W uniformly
                 low=-a,
                 high=a,
@@ -43,22 +44,28 @@ class Encoder:
     def encode(self, x):
         self.input = x
         if hp["encoder"] == "Kitsune":
-            self.output = sigmoid(numpy.dot(x, self.W) + self.hbias)
-            return self.output
+            self.encode_output = sigmoid(numpy.dot(x, self.W) + self.hbias)
+            return self.encode_output
         elif hp["encoder"] == "PNet":
             pass
 
-    def train(self, z):
-        if hp["encoder"] == "Kitsune":
-            L_h2 = self.input - z
-            L_h1 = numpy.dot(L_h2, self.W) * self.output * (1 - self.output)
-            L_hbias = L_h1
-            L_W = numpy.outer(self.input.T, L_h1) + numpy.outer(L_h2.T, self.output)
-            self.W += self.lr * L_W
-            self.hbias += self.lr * L_hbias
-
     def decode(self, x):
         if hp["decoder"] == "Kitsune":
-            self.output = sigmoid(numpy.dot(x, self.W_prime) + self.vbias)
+            self.decode_output = sigmoid(numpy.dot(x, self.W_prime) + self.vbias)
+            return self.decode_output
         elif hp["decoder"] == "PNet":
             pass
+
+    def train(self):
+        if hp["encoder"] == "Kitsune":
+            self.L_h2 = self.input - self.decode_output
+            L_h1 = numpy.dot(self.L_h2, self.W) * self.encode_output * (1 - self.encode_output)
+            L_hbias = L_h1
+            L_vbias = self.L_h2
+            L_W = numpy.outer(self.input.T, L_h1) + numpy.outer(self.L_h2.T, self.encode_output)
+            self.W += self.lr * L_W
+            self.hbias += self.lr * L_hbias
+            self.vbias += self.lr * L_vbias
+
+    def calculateError(self):
+       return numpy.sqrt(numpy.mean(self.L_h2 ** 2))
