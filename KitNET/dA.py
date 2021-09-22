@@ -27,7 +27,7 @@ import sys
 import numpy
 from KitNET.utils import *
 import json
-from KitNET.OurProject import Encoder, Decoder, Norm
+from KitNET.OurProject import Encoder, Norm
 
 
 class dA_params:
@@ -62,8 +62,8 @@ class dA:
             size=(self.params.n_visible, self.params.n_hidden)))
 
       #  self.hbias = numpy.zeros(self.params.n_hidden)  # initialize h bias 0
-        self.vbias = numpy.zeros(self.params.n_visible)  # initialize v bias 0
-        self.W_prime = self.W.T
+      #  self.vbias = numpy.zeros(self.params.n_visible)  # initialize v bias 0
+      #  self.W_prime = self.W.T
         self.encoder = Encoder(self.params.n_visible, self.params.n_hidden)
 
     def get_corrupted_input(self, input, corruption_level):
@@ -80,7 +80,7 @@ class dA:
 
     # Decode
     def get_reconstructed_input(self, hidden):
-        return sigmoid(numpy.dot(hidden, self.W_prime) + self.vbias)
+        return self.encoder.decode(hidden)
 
     def train(self, x):
         self.n = self.n + 1

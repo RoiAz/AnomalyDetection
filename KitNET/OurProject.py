@@ -33,10 +33,12 @@ class Encoder:
         if hp["encoder"] == "Kitsune":
             a = 1. / self.n_visible
             self.hbias = numpy.zeros(self.n_hidden)  # initialize h bias 0
+            self.vbias = numpy.zeros(self.params.n_visible) # initialize v bias 0
             self.W = numpy.array(rng.uniform(  # initialize W uniformly
                 low=-a,
                 high=a,
                 size=(self.n_visible, self.n_hidden)))
+            self.W_prime = self.W.T
 
     def encode(self, x):
         self.input = x
@@ -55,13 +57,8 @@ class Encoder:
             self.W += self.lr * L_W
             self.hbias += self.lr * L_hbias
 
-
-class Decoder:
-    def __init__(self, ):
-        pass
-
-    def decode(self, input):
+    def decode(self, x):
         if hp["decoder"] == "Kitsune":
-            return sigmoid(numpy.dot(input, self.W) + self.hbias)
+            self.output = sigmoid(numpy.dot(x, self.W_prime) + self.vbias)
         elif hp["decoder"] == "PNet":
             pass
