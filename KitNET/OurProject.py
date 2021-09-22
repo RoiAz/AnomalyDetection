@@ -27,14 +27,15 @@ class autoEncoder:
     def __init__(self, n_visible=5, n_hidden=3):
         self.n_visible = n_visible
         self.n_hidden = n_hidden
-        self.lr = hp["encoder_lr"]
+        self.elr = hp["encoder_lr"]
+        self.dlr = hp["decoder_lr"]
         self.input = 0
         self.encode_output = 0
         self.decode_output = 0
         if hp["encoder"] == "Kitsune":
             a = 1. / self.n_visible
             self.hbias = numpy.zeros(self.n_hidden)  # initialize h bias 0
-            self.vbias = numpy.zeros(self.n_visible) # initialize v bias 0
+            self.vbias = numpy.zeros(self.n_visible)  # initialize v bias 0
             self.W = numpy.array(rng.uniform(  # initialize W uniformly
                 low=-a,
                 high=a,
@@ -63,9 +64,11 @@ class autoEncoder:
             L_hbias = L_h1
             L_vbias = self.L_h2
             L_W = numpy.outer(self.input.T, L_h1) + numpy.outer(self.L_h2.T, self.encode_output)
-            self.W += self.lr * L_W
-            self.hbias += self.lr * L_hbias
-            self.vbias += self.lr * L_vbias
+            self.W += self.elr * L_W
+            self.hbias += self.elr * L_hbias
+            self.vbias += self.dlr * L_vbias
+            if hp["decode_train"]:
+                self.W_prime += self.dlr * L_W.T
 
     def calculateError(self):
-       return numpy.sqrt(numpy.mean(self.L_h2 ** 2))
+        return numpy.sqrt(numpy.mean(self.L_h2 ** 2))
