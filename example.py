@@ -15,14 +15,14 @@ import time
 
 # Load Mirai pcap (a recording of the Mirai botnet malware being activated)
 # The first 70,000 observations are clean...
-print("Unzipping Sample Capture...")
-import zipfile
-with zipfile.ZipFile("mirai.zip","r") as zip_ref:
-    zip_ref.extractall()
+# print("Unzipping Sample Capture...")
+# import zipfile
+# with zipfile.ZipFile("mirai.zip","r") as zip_ref:
+#     zip_ref.extractall()
 
 
 # File location
-path = "mirai.pcap" #the pcap, pcapng, or tsv file to process.
+path = "mirai_small.pcap" #the pcap, pcapng, or tsv file to process.
 packet_limit = np.Inf #the number of packets to process
 
 # KitNET params:
