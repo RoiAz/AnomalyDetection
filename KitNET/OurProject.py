@@ -11,7 +11,8 @@ class EncoderCNN(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         modules = []
-        channel_list = [in_channels] + [128] + [256] + [512] + [out_channels]
+    #    channel_list = [in_channels] + [128] + [256] + [512] + [out_channels]
+        channel_list = [in_channels]
         for ci in range(1, len(channel_list)):
             modules.append(
                 nn.Conv1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=3, stride=2))
@@ -22,6 +23,8 @@ class EncoderCNN(nn.Module):
     def forward(self, x):
         x = torch.tensor(x)
         #x = x.view(-1)
+        #print(x)
+        #print(x.shape)
         return self.cnn(x)
 
 
@@ -45,9 +48,8 @@ class DecoderCNN(nn.Module):
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, h):
-        # Tanh to scale to [-1, 1] (same dynamic range as original images).
         h = torch.tensor(h)
-        h = h.view(-1)
+     #   h = h.view(-1)
         return torch.tanh(self.cnn(h))
 
 
