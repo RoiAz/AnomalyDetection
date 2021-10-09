@@ -77,7 +77,6 @@ class AutoEncoder(nn.Module):
     def __init__(self, loss_fn, n_visible=5, n_hidden=3):
         super().__init__()
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print('Using device:', device)
         self.n_visible = n_visible
         self.n_hidden = n_hidden
         self.lr = hp["lr"]
@@ -90,10 +89,12 @@ class AutoEncoder(nn.Module):
         self.loss_fn = loss_fn
         self.Net = hp["net"]
         self.min_kernal_size = 3
-        if n_visible < 3:
+        self.default = False
+        if n_visible < self.min_kernal_size:
+            self.default = True
             self.Net = "Kitsune"
             print("using Kitsune as default")
-
+        print(self.Net)
         if self.Net == "Kitsune":
             a = 1. / self.n_visible
             self.hbias = numpy.zeros(self.n_hidden)  # initialize h bias 0
@@ -104,30 +105,32 @@ class AutoEncoder(nn.Module):
                 size=(self.n_visible, self.n_hidden)))
             self.W_prime = self.W.T
 
-        elif self.Net == "PNet":
+        #elif self.Net == "PNet":
+        else:
             self.in_channels = hp["in_channels"]
             self.out_channels = hp["out_channels"]
             self.encoder = EncoderCNN(in_channels=self.in_channels, out_channels=self.out_channels).to(device)
             print(self.encoder)
             self.decoder = DecoderCNN(in_channels=self.out_channels, out_channels=self.in_channels).to(device)
             print(self.decoder)
-            self.features_encoder = n_visible
-            self.features_decoder = n_hidden
-            self.z_dim = z_dim
-            self.features_shape, n_features = self._check_features(in_size)
-            self.mu_a = nn.Linear(n_features, z_dim, bias=True)
-            self.log_sigma = nn.Linear(n_features, z_dim, bias=True)
-            self.z_to_h = nn.Linear(z_dim, n_features, bias=True)
+            self.z_dim = hp['z_dim']
+            self.features_shape, n_features = self._check_features(n_visible)
+            self.mu_a = nn.Linear(n_features, self.z_dim, bias=True)
+            self.log_sigma = nn.Linear(n_features, self.z_dim, bias=True)
+            self.z_to_h = nn.Linear(self.z_dim, n_features, bias=True)
+            print("$" * 10)
             if hp["opt"] == "adam":
-                self.optimizer = create_optimizer(self.encoder.parameters(), hp['enc_optimizer'])
+                print("#"*10)
+                self.optimizer = optim.Adam(self.parameters(), lr=self.lr, betas=hp["betas"])
+                print(self.optimizer)
 
     def _check_features(self, in_size):
         device = next(self.parameters()).device
         with torch.no_grad():
             # Make sure encoder and decoder are compatible
-            x = torch.randn(1, *in_size, device=device)
-            h = self.features_encoder(x)
-            xr = self.features_decoder(h)
+            x = torch.randn(1, in_size, device=device)
+            h = self.encoder(x)
+            xr = self.decoder(h)
             assert xr.shape == x.shape
             # Return the shape and number of encoded features
             return h.shape[1:], torch.numel(h) // h.shape[0]
@@ -161,6 +164,8 @@ class AutoEncoder(nn.Module):
             if hp["decode_train"]:
                 self.W_prime += self.lr * L_W.T
         else:
+            print(self.Net)
+            print(self.default)
             self.optimizer.zero_grad()
             output = self.decode_output
             loss = self.loss_fn(output, self.input)

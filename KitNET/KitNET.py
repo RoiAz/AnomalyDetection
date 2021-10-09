@@ -1,6 +1,7 @@
 import numpy as np
 import KitNET.dA as AE
 import KitNET.corClust as CC
+import torch
 
 # This class represents a KitNET machine learner.
 # KitNET is a lightweight online anomaly detection algorithm based on an ensemble of autoencoders.
@@ -19,6 +20,8 @@ class KitNET:
     #           For example, [[2,5,3],[4,0,1],[6,7]]
     def __init__(self,n,max_autoencoder_size=10,FM_grace_period=None,AD_grace_period=10000,learning_rate=0.1,hidden_ratio=0.75, feature_map = None):
         # Parameters:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print('Using device:', device)
         self.AD_grace_period = AD_grace_period
         if FM_grace_period is None:
             self.FM_grace_period = AD_grace_period
