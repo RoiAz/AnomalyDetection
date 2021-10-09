@@ -12,16 +12,19 @@ class EncoderCNN(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         modules = []
-        channel_list = [in_channels] + [2] + [4] + [out_channels]
+        #channel_list = [in_channels] + [2] + [4] + [out_channels]
+        channel_list = [in_channels] + [out_channels]
         for ci in range(1, len(channel_list)):
             modules.append(
-                nn.Conv1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=3, stride=2))
-            modules.append(nn.BatchNorm1d(channel_list[ci]))
+                nn.Conv1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=3, stride=2, dtype=torch.float))
+           # modules.append(nn.BatchNorm1d(channel_list[ci]))
             modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, x):
-        x = torch.tensor(x)
+        x = torch.tensor(x, dtype=torch.float)
+        x = torch.reshape(x, (-1,))
+        x = torch.reshape(x, (1, 1, x.shape[0]))
         return self.cnn(x)
 
 
@@ -29,7 +32,8 @@ class DecoderCNN(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         modules = []
-        channel_list = [in_channels] + [4] + [2] + [out_channels]
+        #channel_list = [in_channels] + [4] + [2] + [out_channels]
+        channel_list = [in_channels] + [out_channels]
         for ci in range(1, len(channel_list)):
             if ci == len(channel_list) - 1:
                 modules.append(
@@ -39,13 +43,15 @@ class DecoderCNN(nn.Module):
                 modules.append(
                     nn.ConvTranspose1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=3,
                                        stride=2))
-            modules.append(nn.BatchNorm1d(channel_list[ci]))
+          #  modules.append(nn.BatchNorm1d(channel_list[ci]))
             modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, h):
-        h = torch.tensor(h)
-        return torch.tanh(self.cnn(h))
+        h = torch.tanh(self.cnn(h))
+        h = torch.reshape(h, (-1,))
+        h = torch.reshape(h, (1, h.shape[0]))
+        return h
 
 
 class Norm:
@@ -74,7 +80,7 @@ def create_optimizer(model_params, opt_params):
 
 
 class AutoEncoder(nn.Module):
-    def __init__(self, loss_fn, n_visible=5, n_hidden=3):
+    def __init__(self, n_visible=5, n_hidden=3):
         super().__init__()
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.n_visible = n_visible
@@ -86,15 +92,18 @@ class AutoEncoder(nn.Module):
         self.decode_output = 0
         self.encoder = None
         self.decoder = None
-        self.loss_fn = loss_fn
+        self.loss_fn = None
         self.Net = hp["net"]
         self.min_kernal_size = 3
         self.default = False
         if n_visible < self.min_kernal_size:
             self.default = True
             self.Net = "Kitsune"
+            self.loss_fn = Loss("Krmse")
             print("using Kitsune as default")
-        print(self.Net)
+        else:
+            self.loss_fn = Loss(hp["loss"])
+            print("using: " + self.Net)
         if self.Net == "Kitsune":
             a = 1. / self.n_visible
             self.hbias = numpy.zeros(self.n_hidden)  # initialize h bias 0
@@ -105,22 +114,20 @@ class AutoEncoder(nn.Module):
                 size=(self.n_visible, self.n_hidden)))
             self.W_prime = self.W.T
 
-        #elif self.Net == "PNet":
+        # elif self.Net == "PNet":
         else:
             self.in_channels = hp["in_channels"]
             self.out_channels = hp["out_channels"]
             self.encoder = EncoderCNN(in_channels=self.in_channels, out_channels=self.out_channels).to(device)
-            print(self.encoder)
+          #  print(self.encoder)
             self.decoder = DecoderCNN(in_channels=self.out_channels, out_channels=self.in_channels).to(device)
-            print(self.decoder)
+         #   print(self.decoder)
             self.z_dim = hp['z_dim']
             self.features_shape, n_features = self._check_features(n_visible)
             self.mu_a = nn.Linear(n_features, self.z_dim, bias=True)
             self.log_sigma = nn.Linear(n_features, self.z_dim, bias=True)
             self.z_to_h = nn.Linear(self.z_dim, n_features, bias=True)
-            print("$" * 10)
             if hp["opt"] == "adam":
-                print("#"*10)
                 self.optimizer = optim.Adam(self.parameters(), lr=self.lr, betas=hp["betas"])
                 print(self.optimizer)
 
@@ -128,28 +135,32 @@ class AutoEncoder(nn.Module):
         device = next(self.parameters()).device
         with torch.no_grad():
             # Make sure encoder and decoder are compatible
-            x = torch.randn(1, in_size, device=device)
+            x = torch.randn(1, in_size, device=device, dtype=torch.float)
             h = self.encoder(x)
             xr = self.decoder(h)
-            assert xr.shape == x.shape
+#            assert xr.shape == x.shape #TODO: comment in, need to handle case of diffrent size input in conv1d
             # Return the shape and number of encoded features
             return h.shape[1:], torch.numel(h) // h.shape[0]
 
     def encode(self, x):
-        self.input = x
         if self.Net == "Kitsune":
+            self.input = x
             self.encode_output = sigmoid(numpy.dot(x, self.W) + self.hbias)
-            print(self.encode_output)
             return self.encode_output
-        elif self.Net == "PNet":
+        #elif self.Net == "PNet":
+        else:
+            x = torch.tensor(x, dtype=torch.double)
+            self.input = torch.reshape(x, (-1,))
             return self.encoder.forward(x)
 
     def decode(self, x):
         if self.Net == "Kitsune":
             self.decode_output = sigmoid(numpy.dot(x, self.W_prime) + self.vbias)
-            return self.decode_output
-        elif self.Net == "PNet":
-            return self.decoder.forward(x)
+       # elif self.Net == "PNet":
+        else:
+            h = self.decoder.forward(x)
+            self.decode_output = torch.reshape(h, (-1,))
+        return self.decode_output
 
     def train(self):
         if self.Net == "Kitsune":
@@ -164,11 +175,12 @@ class AutoEncoder(nn.Module):
             if hp["decode_train"]:
                 self.W_prime += self.lr * L_W.T
         else:
-            print(self.Net)
-            print(self.default)
             self.optimizer.zero_grad()
             output = self.decode_output
-            loss = self.loss_fn(output, self.input)
+            print("%" * 10)
+            print(self.input.shape)
+            print(output.shape)
+            loss = self.loss_fn.forward(output, self.input)
             loss.backward()
             self.optimizer.step()
 
@@ -177,12 +189,12 @@ class AutoEncoder(nn.Module):
 
 
 class Loss:
-    def __init__(self):
-        if hp["loss"] == "Krmse":
+    def __init__(self, type):
+        if type == "Krmse":
             self.loss_fn = lambda x, z: numpy.sqrt(((x - z) ** 2).mean())
 
-        if hp["loss"] == "CE":
+        if type == "CE":
             self.loss_fn = nn.CrossEntropyLoss()
 
-    def forward(self, x, y=0):
+    def forward(self, x, y):
         return self.loss_fn(x, y)

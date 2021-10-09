@@ -48,8 +48,7 @@ class dA:
         self.norm_func = Norm(self.params.n_visible)
         self.n = 0
         self.rng = numpy.random.RandomState(1234)
-        self.loss_fn = Loss()
-        self.autoencoder = AutoEncoder(self.loss_fn, self.params.n_visible, self.params.n_hidden)
+        self.autoencoder = AutoEncoder(self.params.n_visible, self.params.n_hidden)
 
     def get_corrupted_input(self, input, corruption_level):
         assert corruption_level < 1
