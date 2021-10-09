@@ -21,10 +21,7 @@ class EncoderCNN(nn.Module):
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, x):
-        print(x.shape)
-        print(x)
         x = torch.tensor(x)
-        print(x.shape)
         return self.cnn(x)
 
 
@@ -76,7 +73,6 @@ def create_optimizer(model_params, opt_params):
     return optim.__dict__[optimizer_type](model_params, **opt_params)
 
 
-
 class AutoEncoder(nn.Module):
     def __init__(self, loss_fn, n_visible=5, n_hidden=3):
         super().__init__()
@@ -98,7 +94,6 @@ class AutoEncoder(nn.Module):
             self.Net = "Kitsune"
             print("using Kitsune as default")
 
-
         if self.Net == "Kitsune":
             a = 1. / self.n_visible
             self.hbias = numpy.zeros(self.n_hidden)  # initialize h bias 0
@@ -109,16 +104,33 @@ class AutoEncoder(nn.Module):
                 size=(self.n_visible, self.n_hidden)))
             self.W_prime = self.W.T
 
-        if self.Net == "PNet":
+        elif self.Net == "PNet":
             self.in_channels = hp["in_channels"]
             self.out_channels = hp["out_channels"]
             self.encoder = EncoderCNN(in_channels=self.in_channels, out_channels=self.out_channels).to(device)
             print(self.encoder)
             self.decoder = DecoderCNN(in_channels=self.out_channels, out_channels=self.in_channels).to(device)
             print(self.decoder)
+            self.features_encoder = n_visible
+            self.features_decoder = n_hidden
+            self.z_dim = z_dim
+            self.features_shape, n_features = self._check_features(in_size)
+            self.mu_a = nn.Linear(n_features, z_dim, bias=True)
+            self.log_sigma = nn.Linear(n_features, z_dim, bias=True)
+            self.z_to_h = nn.Linear(z_dim, n_features, bias=True)
             if hp["opt"] == "adam":
-                self.enc_optimizer = create_optimizer(self.encoder.parameters(), hp['enc_optimizer'])
-                self.dec_optimizer = create_optimizer(self.decoder.parameters(), hp['dec_optimizer'])
+                self.optimizer = create_optimizer(self.encoder.parameters(), hp['enc_optimizer'])
+
+    def _check_features(self, in_size):
+        device = next(self.parameters()).device
+        with torch.no_grad():
+            # Make sure encoder and decoder are compatible
+            x = torch.randn(1, *in_size, device=device)
+            h = self.features_encoder(x)
+            xr = self.features_decoder(h)
+            assert xr.shape == x.shape
+            # Return the shape and number of encoded features
+            return h.shape[1:], torch.numel(h) // h.shape[0]
 
     def encode(self, x):
         self.input = x
@@ -133,7 +145,7 @@ class AutoEncoder(nn.Module):
         if self.Net == "Kitsune":
             self.decode_output = sigmoid(numpy.dot(x, self.W_prime) + self.vbias)
             return self.decode_output
-        elif hp["net"] == "PNet":
+        elif self.Net == "PNet":
             return self.decoder.forward(x)
 
     def train(self):
@@ -149,8 +161,7 @@ class AutoEncoder(nn.Module):
             if hp["decode_train"]:
                 self.W_prime += self.lr * L_W.T
         else:
-            self.enc_optimizer.zero_grad()
-            self.dec_optimizer.zero_grad()
+            self.optimizer.zero_grad()
             output = self.decode_output
             loss = self.loss_fn(output, self.input)
             loss.backward()
