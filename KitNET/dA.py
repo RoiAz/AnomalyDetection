@@ -48,11 +48,6 @@ class dA:
         self.norm_func = Norm(self.params.n_visible)
         self.n = 0
         self.rng = numpy.random.RandomState(1234)
-        a = 1. / self.params.n_visible
-        self.W = numpy.array(self.rng.uniform(  # initialize W uniformly
-            low=-a,
-            high=a,
-            size=(self.params.n_visible, self.params.n_hidden)))
         self.loss_fn = Loss()
         self.autoencoder = AutoEncoder(self.loss_fn, self.params.n_visible, self.params.n_hidden)
 

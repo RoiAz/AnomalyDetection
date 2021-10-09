@@ -12,8 +12,7 @@ class EncoderCNN(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         modules = []
-        #    channel_list = [in_channels] + [128] + [256] + [512] + [out_channels]
-        channel_list = [in_channels]
+        channel_list = [in_channels] + [2] + [4] + [out_channels]
         for ci in range(1, len(channel_list)):
             modules.append(
                 nn.Conv1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=3, stride=2))
@@ -22,7 +21,10 @@ class EncoderCNN(nn.Module):
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, x):
+        print(x.shape)
+        print(x)
         x = torch.tensor(x)
+        print(x.shape)
         return self.cnn(x)
 
 
@@ -30,9 +32,7 @@ class DecoderCNN(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         modules = []
-        #    channel_list = [in_channels] + [512] + [256] + [128] + [out_channels]
-        channel_list = [in_channels]
-
+        channel_list = [in_channels] + [4] + [2] + [out_channels]
         for ci in range(1, len(channel_list)):
             if ci == len(channel_list) - 1:
                 modules.append(
@@ -69,9 +69,19 @@ class Norm:
             return (x - self.norm_min) / (self.norm_max - self.norm_min + 0.0000000000000001)
 
 
+def create_optimizer(model_params, opt_params):
+    opt_params = opt_params.copy()
+    optimizer_type = opt_params['type']
+    opt_params.pop('type')
+    return optim.__dict__[optimizer_type](model_params, **opt_params)
+
+
+
 class AutoEncoder(nn.Module):
     def __init__(self, loss_fn, n_visible=5, n_hidden=3):
         super().__init__()
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print('Using device:', device)
         self.n_visible = n_visible
         self.n_hidden = n_hidden
         self.lr = hp["lr"]
@@ -82,8 +92,14 @@ class AutoEncoder(nn.Module):
         self.encoder = None
         self.decoder = None
         self.loss_fn = loss_fn
+        self.Net = hp["net"]
+        self.min_kernal_size = 3
+        if n_visible < 3:
+            self.Net = "Kitsune"
+            print("using Kitsune as default")
 
-        if hp["net"] == "Kitsune":
+
+        if self.Net == "Kitsune":
             a = 1. / self.n_visible
             self.hbias = numpy.zeros(self.n_hidden)  # initialize h bias 0
             self.vbias = numpy.zeros(self.n_visible)  # initialize v bias 0
@@ -93,32 +109,35 @@ class AutoEncoder(nn.Module):
                 size=(self.n_visible, self.n_hidden)))
             self.W_prime = self.W.T
 
-        if hp["net"] == "PNet":
+        if self.Net == "PNet":
             self.in_channels = hp["in_channels"]
-            self.h_dim = hp['h_dim']
             self.out_channels = hp["out_channels"]
-            self.encoder = EncoderCNN(in_channels=self.in_channels, out_channels=self.h_dim)
-            self.decoder = DecoderCNN(in_channels=self.h_dim, out_channels=self.out_channels)
-            if hp["opt"] =="adam":
-                self.optimizer = optim.Adam(self.parameters(), lr=self.lr, betas=hp["betas"])
+            self.encoder = EncoderCNN(in_channels=self.in_channels, out_channels=self.out_channels).to(device)
+            print(self.encoder)
+            self.decoder = DecoderCNN(in_channels=self.out_channels, out_channels=self.in_channels).to(device)
+            print(self.decoder)
+            if hp["opt"] == "adam":
+                self.enc_optimizer = create_optimizer(self.encoder.parameters(), hp['enc_optimizer'])
+                self.dec_optimizer = create_optimizer(self.decoder.parameters(), hp['dec_optimizer'])
 
     def encode(self, x):
         self.input = x
-        if hp["net"] == "Kitsune":
+        if self.Net == "Kitsune":
             self.encode_output = sigmoid(numpy.dot(x, self.W) + self.hbias)
+            print(self.encode_output)
             return self.encode_output
-        elif hp["net"] == "PNet":
+        elif self.Net == "PNet":
             return self.encoder.forward(x)
 
     def decode(self, x):
-        if hp["net"] == "Kitsune":
+        if self.Net == "Kitsune":
             self.decode_output = sigmoid(numpy.dot(x, self.W_prime) + self.vbias)
             return self.decode_output
         elif hp["net"] == "PNet":
             return self.decoder.forward(x)
 
     def train(self):
-        if hp["net"] == "Kitsune":
+        if self.Net == "Kitsune":
             self.L_h2 = self.input - self.decode_output
             L_h1 = numpy.dot(self.L_h2, self.W) * self.encode_output * (1 - self.encode_output)
             L_hbias = L_h1
@@ -130,12 +149,12 @@ class AutoEncoder(nn.Module):
             if hp["decode_train"]:
                 self.W_prime += self.lr * L_W.T
         else:
-            self.optimizer.zero_grad()
+            self.enc_optimizer.zero_grad()
+            self.dec_optimizer.zero_grad()
             output = self.decode_output
             loss = self.loss_fn(output, self.input)
             loss.backward()
             self.optimizer.step()
-
 
     def calculateError(self):
         return numpy.sqrt(numpy.mean(self.L_h2 ** 2))
@@ -151,5 +170,3 @@ class Loss:
 
     def forward(self, x, y=0):
         return self.loss_fn(x, y)
-
-
