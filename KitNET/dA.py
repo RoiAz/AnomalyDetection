@@ -87,7 +87,7 @@ class dA:
         else:
             x = self.norm_func.norm(x, train_mode=False)
             z = self.reconstruct(x)
-            loss = self.loss_fn.forward(x, z)
+            loss = self.autoencoder.loss_fn.forward(x, z)
             return loss
 
     def inGrace(self):
