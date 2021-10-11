@@ -16,7 +16,7 @@ class EncoderCNN(nn.Module):
         channel_list = [in_channels] + [out_channels]
         for ci in range(1, len(channel_list)):
             modules.append(
-                nn.Conv1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=3, stride=2, dtype=torch.float))
+                nn.Conv1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2, stride=1, dtype=torch.float))
            # modules.append(nn.BatchNorm1d(channel_list[ci]))
             modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
@@ -37,12 +37,12 @@ class DecoderCNN(nn.Module):
         for ci in range(1, len(channel_list)):
             if ci == len(channel_list) - 1:
                 modules.append(
-                    nn.ConvTranspose1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=3,
-                                       stride=2, output_padding=1))
+                    nn.ConvTranspose1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2,
+                                       stride=1))
             else:
                 modules.append(
-                    nn.ConvTranspose1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=3,
-                                       stride=2))
+                    nn.ConvTranspose1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2,
+                                       stride=1))
           #  modules.append(nn.BatchNorm1d(channel_list[ci]))
             modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
@@ -129,7 +129,7 @@ class AutoEncoder(nn.Module):
             self.z_to_h = nn.Linear(self.z_dim, n_features, bias=True)
             if hp["opt"] == "adam":
                 self.optimizer = optim.Adam(self.parameters(), lr=self.lr, betas=hp["betas"])
-                print(self.optimizer)
+           #     print(self.optimizer)
 
     def _check_features(self, in_size):
         device = next(self.parameters()).device
@@ -138,7 +138,9 @@ class AutoEncoder(nn.Module):
             x = torch.randn(1, in_size, device=device, dtype=torch.float)
             h = self.encoder(x)
             xr = self.decoder(h)
-#            assert xr.shape == x.shape #TODO: comment in, need to handle case of diffrent size input in conv1d
+          #  print(x.shape)
+           # print(xr.shape)
+            assert xr.shape == x.shape
             # Return the shape and number of encoded features
             return h.shape[1:], torch.numel(h) // h.shape[0]
 
@@ -177,9 +179,9 @@ class AutoEncoder(nn.Module):
         else:
             self.optimizer.zero_grad()
             output = self.decode_output
-            print("%" * 10)
-            print(self.input.shape)
-            print(output.shape)
+            # print("%" * 10)
+            # print(self.input.shape)
+            # print(output.shape)
             loss = self.loss_fn.forward(output, self.input)
             loss.backward()
             self.optimizer.step()
@@ -196,5 +198,12 @@ class Loss:
         if type == "CE":
             self.loss_fn = nn.CrossEntropyLoss()
 
+        if type == "L1":
+            self.loss_fn = nn.L1Loss()
+
     def forward(self, x, y):
+        # print(x.shape)
+        # print(x)
+        # print(y.shape)
+        # print(y)
         return self.loss_fn(x, y)

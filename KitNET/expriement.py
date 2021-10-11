@@ -3,6 +3,6 @@ def hyperparms():
     hp = dict(
         lr=learning_rate, net="Pnet",
         corruption_level=0.001, norm="Knorm", decode_train=True, in_channels=1,
-        out_channels=8, loss="CE", opt="adam",  z_dim=25,  x_sigma2=0.0005, betas=(0.8, 0.8))
+        out_channels=8, loss="L1", opt="adam",  z_dim=25,  x_sigma2=0.0005, betas=(0.8, 0.8))
 
     return hp
