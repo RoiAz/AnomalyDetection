@@ -22,7 +22,7 @@ import time
 
 
 # File location
-path = "mirai_medium.pcap.tsv" #the pcap, pcapng, or tsv file to process.
+path = "mirai_full.pcap" #the pcap, pcapng, or tsv file to process.
 packet_limit = np.Inf #the number of packets to process
 
 # KitNET params:
@@ -30,8 +30,7 @@ maxAE = 10 #maximum size for any autoencoder in the ensemble layer
 FMgrace = 5000 #the number of instances taken to learn the feature mapping (the ensemble's architecture)
 ADgrace = 50000 #the number of instances used to train the anomaly detector (ensemble itself)
 
-# FMgrace = 1
-# ADgrace = 1
+
 
 # Build Kitsune
 K = Kitsune(path,packet_limit,maxAE,FMgrace,ADgrace)
@@ -49,6 +48,7 @@ while True:
     rmse = K.proc_next_packet()
     if rmse == -1:
         break
+   # print(rmse)
     RMSEs.append(rmse)
 stop = time.time()
 print("Complete. Time elapsed: "+ str(stop - start))
@@ -57,6 +57,10 @@ print("Complete. Time elapsed: "+ str(stop - start))
 # Here we demonstrate how one can fit the RMSE scores to a log-normal distribution (useful for finding/setting a cutoff threshold \phi)
 from scipy.stats import norm
 benignSample = np.log(RMSEs[FMgrace+ADgrace+1:100000])
+#benignSample = np.log(RMSEs[FMgrace+ADgrace+1])
+#print(10*"$")
+#print(benignSample)
+
 logProbs = norm.logsf(np.log(RMSEs), np.mean(benignSample), np.std(benignSample))
 
 # plot the RMSE anomaly scores

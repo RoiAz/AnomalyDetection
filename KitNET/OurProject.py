@@ -12,12 +12,13 @@ class EncoderCNN(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         modules = []
-        #channel_list = [in_channels] + [2] + [4] + [out_channels]
+        # channel_list = [in_channels] + [2] + [4] + [out_channels]
         channel_list = [in_channels] + [out_channels]
         for ci in range(1, len(channel_list)):
             modules.append(
-                nn.Conv1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2, stride=1, dtype=torch.float))
-           # modules.append(nn.BatchNorm1d(channel_list[ci]))
+                nn.Conv1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2, stride=1,
+                          dtype=torch.float))
+            # modules.append(nn.BatchNorm1d(channel_list[ci]))
             modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
 
@@ -32,7 +33,7 @@ class DecoderCNN(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         modules = []
-        #channel_list = [in_channels] + [4] + [2] + [out_channels]
+        # channel_list = [in_channels] + [4] + [2] + [out_channels]
         channel_list = [in_channels] + [out_channels]
         for ci in range(1, len(channel_list)):
             if ci == len(channel_list) - 1:
@@ -43,7 +44,7 @@ class DecoderCNN(nn.Module):
                 modules.append(
                     nn.ConvTranspose1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2,
                                        stride=1))
-          #  modules.append(nn.BatchNorm1d(channel_list[ci]))
+            #  modules.append(nn.BatchNorm1d(channel_list[ci]))
             modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
 
@@ -93,6 +94,7 @@ class AutoEncoder(nn.Module):
         self.encoder = None
         self.decoder = None
         self.loss_fn = None
+        self.err_fn = None
         self.Net = hp["net"]
         self.min_kernal_size = 3
         self.default = False
@@ -113,23 +115,25 @@ class AutoEncoder(nn.Module):
                 high=a,
                 size=(self.n_visible, self.n_hidden)))
             self.W_prime = self.W.T
+            self.err_fn = lambda x, z: numpy.sqrt(numpy.mean((x - z) ** 2))
 
-        # elif self.Net == "PNet":
         else:
+            if hp["err_func"] == "rmse":
+                criterion = nn.MSELoss()
+                self.err_fn = lambda x, z: torch.sqrt(criterion(x, z))
             self.in_channels = hp["in_channels"]
             self.out_channels = hp["out_channels"]
             self.encoder = EncoderCNN(in_channels=self.in_channels, out_channels=self.out_channels).to(device)
-          #  print(self.encoder)
+            #  print(self.encoder)
             self.decoder = DecoderCNN(in_channels=self.out_channels, out_channels=self.in_channels).to(device)
-         #   print(self.decoder)
+            #   print(self.decoder)
             self.z_dim = hp['z_dim']
             self.features_shape, n_features = self._check_features(n_visible)
             self.mu_a = nn.Linear(n_features, self.z_dim, bias=True)
             self.log_sigma = nn.Linear(n_features, self.z_dim, bias=True)
-            self.z_to_h = nn.Linear(self.z_dim, n_features, bias=True)
+            self.x_to_h = nn.Linear(self.z_dim, n_features, bias=True)
             if hp["opt"] == "adam":
                 self.optimizer = optim.Adam(self.parameters(), lr=self.lr, betas=hp["betas"])
-           #     print(self.optimizer)
 
     def _check_features(self, in_size):
         device = next(self.parameters()).device
@@ -138,8 +142,8 @@ class AutoEncoder(nn.Module):
             x = torch.randn(1, in_size, device=device, dtype=torch.float)
             h = self.encoder(x)
             xr = self.decoder(h)
-          #  print(x.shape)
-           # print(xr.shape)
+            #  print(x.shape)
+            # print(xr.shape)
             assert xr.shape == x.shape
             # Return the shape and number of encoded features
             return h.shape[1:], torch.numel(h) // h.shape[0]
@@ -148,21 +152,39 @@ class AutoEncoder(nn.Module):
         if self.Net == "Kitsune":
             self.input = x
             self.encode_output = sigmoid(numpy.dot(x, self.W) + self.hbias)
-            return self.encode_output
-        #elif self.Net == "PNet":
         else:
             x = torch.tensor(x, dtype=torch.double)
             self.input = torch.reshape(x, (-1,))
-            return self.encoder.forward(x)
+            init_z = self.encoder.forward(x)
+            init_z = init_z.view(init_z.size(0), -1)
+            mu = self.mu_a(init_z)
+            log_sigma2 = self.log_sigma(init_z)
+            u = torch.randn_like(mu)
+            sig = torch.exp(log_sigma2)
+            z = mu + u * sig
+            self.encode_output = z
+        return self.encode_output
 
     def decode(self, x):
         if self.Net == "Kitsune":
             self.decode_output = sigmoid(numpy.dot(x, self.W_prime) + self.vbias)
-       # elif self.Net == "PNet":
         else:
-            h = self.decoder.forward(x)
-            self.decode_output = torch.reshape(h, (-1,))
+            h = self.x_to_h(x)
+            h = h.reshape((-1, *self.features_shape))
+            x_rec = self.decoder.forward(h)
+            x_rec = torch.tanh(x_rec)
+            self.decode_output = torch.reshape(x_rec, (-1,))
         return self.decode_output
+
+    def execute(self, x):
+        if self.Net != "Kitsune":
+            x = torch.tensor(x, dtype=torch.double)
+        h = self.encode(x)
+        x_rec = self.decode(h)
+        loss = self.loss_fn.forward(x, x_rec)
+        if self.Net != "Kitsune":
+            loss = loss.detach().numpy()
+        return loss
 
     def train(self):
         if self.Net == "Kitsune":
@@ -187,7 +209,7 @@ class AutoEncoder(nn.Module):
             self.optimizer.step()
 
     def calculateError(self):
-        return numpy.sqrt(numpy.mean(self.L_h2 ** 2))
+        return self.err_fn(self.input, self.decode_output)
 
 
 class Loss:
@@ -202,8 +224,4 @@ class Loss:
             self.loss_fn = nn.L1Loss()
 
     def forward(self, x, y):
-        # print(x.shape)
-        # print(x)
-        # print(y.shape)
-        # print(y)
         return self.loss_fn(x, y)

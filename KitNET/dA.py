@@ -86,9 +86,8 @@ class dA:
             return 0.0
         else:
             x = self.norm_func.norm(x, train_mode=False)
-            z = self.reconstruct(x)
-            loss = self.autoencoder.loss_fn.forward(x, z)
-            return loss
+            return self.autoencoder.execute(x)
+
 
     def inGrace(self):
         return self.n < self.params.gracePeriod
