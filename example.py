@@ -22,13 +22,13 @@ import time
 
 
 # File location
-path = "mirai_full.pcap" #the pcap, pcapng, or tsv file to process.
+path = "mirai_medium.pcap" #the pcap, pcapng, or tsv file to process.
 packet_limit = np.Inf #the number of packets to process
 
 # KitNET params:
 maxAE = 10 #maximum size for any autoencoder in the ensemble layer
 FMgrace = 5000 #the number of instances taken to learn the feature mapping (the ensemble's architecture)
-ADgrace = 50000 #the number of instances used to train the anomaly detector (ensemble itself)
+ADgrace = 6000 #the number of instances used to train the anomaly detector (ensemble itself)
 
 
 
@@ -37,6 +37,7 @@ K = Kitsune(path,packet_limit,maxAE,FMgrace,ADgrace)
 
 print("Running Kitsune:")
 RMSEs = []
+malicious_pckts_index_list = []
 i = 0
 start = time.time()
 # Here we process (train/execute) each individual packet.
@@ -50,6 +51,7 @@ while True:
         break
    # print(rmse)
     RMSEs.append(rmse)
+    resultAccuracy.add(rmse,i)
 stop = time.time()
 print("Complete. Time elapsed: "+ str(stop - start))
 
@@ -69,6 +71,9 @@ from matplotlib import pyplot as plt
 from matplotlib import cm
 plt.figure(figsize=(10,5))
 fig = plt.scatter(range(FMgrace+ADgrace+1,len(RMSEs)),RMSEs[FMgrace+ADgrace+1:],s=0.1,c=logProbs[FMgrace+ADgrace+1:],cmap='RdYlGn')
+print(suspicious_indexes)
+success_rate = resultAccuracy.accuracyrate()
+print(f'success_rate is {success_rate:.3f}.')
 plt.yscale("log")
 plt.title("Anomaly Scores from Kitsune's Execution Phase")
 plt.ylabel("RMSE (log scaled)")
