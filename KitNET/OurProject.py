@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+
+
 hp = hyperparms()
 rng = numpy.random.RandomState(1234)
 

@@ -1,3 +1,4 @@
+from KitNET.Results import resultAccuracy
 from Kitsune import Kitsune
 import numpy as np
 import time
@@ -10,58 +11,58 @@ import time
 # The demo involves an m-by-n dataset with n=115 dimensions (features), and m=100,000 observations.
 # Each observation is a snapshot of the network's state in terms of incremental damped statistics (see the NDSS paper for more details)
 
-#The runtimes presented in the paper, are based on the C++ implimentation (roughly 100x faster than the python implimentation)
+# The runtimes presented in the paper, are based on the C++ implimentation (roughly 100x faster than the python implimentation)
 ###################  Last Tested with Anaconda 3.6.3   #######################
 
 # Load Mirai pcap (a recording of the Mirai botnet malware being activated)
 # The first 70,000 observations are clean...
-#print("Unzipping Sample Capture...")
-#import zipfile
-#with zipfile.ZipFile("mirai.zip","r") as zip_ref:
- #   zip_ref.extractall()
+# print("Unzipping Sample Capture...")
+# import zipfile
+# with zipfile.ZipFile("mirai.zip","r") as zip_ref:
+#   zip_ref.extractall()
 
 
 # File location
-path = "syndos_med.pcap" #the pcap, pcapng, or tsv file to process.
-packet_limit = np.Inf #the number of packets to process
+path = "syndos_med.pcap.tsv"  # the pcap, pcapng, or tsv file to process.
+labels_path = "SYN_DoS_labels.csv"
+packet_limit = np.Inf  # the number of packets to process
 
 # KitNET params:
-maxAE = 10 #maximum size for any autoencoder in the ensemble layer
-FMgrace = 5000 #the number of instances taken to learn the feature mapping (the ensemble's architecture)
-ADgrace = 50000 #the number of instances used to train the anomaly detector (ensemble itself)
-
-
+maxAE = 10  # maximum size for any autoencoder in the ensemble layer
+FMgrace = 5000  # the number of instances taken to learn the feature mapping (the ensemble's architecture)
+ADgrace = 50000  # the number of instances used to train the anomaly detector (ensemble itself)
 
 # Build Kitsune
-K = Kitsune(path,packet_limit,maxAE,FMgrace,ADgrace)
+K = Kitsune(path, packet_limit, maxAE, FMgrace, ADgrace)
 
 print("Running Kitsune:")
 RMSEs = []
 malicious_pckts_index_list = []
 i = 0
 start = time.time()
+res_acc = resultAccuracy(labels_path)
 # Here we process (train/execute) each individual packet.
 # In this way, each observation is discarded after performing process() method.
 while True:
-    i+=1
+    i += 1
     if i % 1000 == 0:
         print(i)
     rmse = K.proc_next_packet()
     if rmse == -1:
         break
-   # print(rmse)
+    # print(rmse)
     RMSEs.append(rmse)
-    resultAccuracy.add(rmse,i)
+    res_acc.add(rmse=rmse, index=i)
 stop = time.time()
-print("Complete. Time elapsed: "+ str(stop - start))
-
+print("Complete. Time elapsed: " + str(stop - start))
 
 # Here we demonstrate how one can fit the RMSE scores to a log-normal distribution (useful for finding/setting a cutoff threshold \phi)
 from scipy.stats import norm
-benignSample = np.log(RMSEs[FMgrace+ADgrace+1:100000])
-#benignSample = np.log(RMSEs[FMgrace+ADgrace+1])
-#print(10*"$")
-#print(benignSample)
+
+benignSample = np.log(RMSEs[FMgrace + ADgrace + 1:100000])
+# benignSample = np.log(RMSEs[FMgrace+ADgrace+1])
+# print(10*"$")
+# print(benignSample)
 
 logProbs = norm.logsf(np.log(RMSEs), np.mean(benignSample), np.std(benignSample))
 
@@ -69,8 +70,10 @@ logProbs = norm.logsf(np.log(RMSEs), np.mean(benignSample), np.std(benignSample)
 print("Plotting results")
 from matplotlib import pyplot as plt
 from matplotlib import cm
-plt.figure(figsize=(10,5))
-fig = plt.scatter(range(FMgrace+ADgrace+1,len(RMSEs)),RMSEs[FMgrace+ADgrace+1:],s=0.1,c=logProbs[FMgrace+ADgrace+1:],cmap='RdYlGn')
+
+plt.figure(figsize=(10, 5))
+fig = plt.scatter(range(FMgrace + ADgrace + 1, len(RMSEs)), RMSEs[FMgrace + ADgrace + 1:], s=0.1,
+                  c=logProbs[FMgrace + ADgrace + 1:], cmap='RdYlGn')
 print(suspicious_indexes)
 success_rate = resultAccuracy.accuracyrate()
 print(f'success_rate is {success_rate:.3f}.')
@@ -78,6 +81,6 @@ plt.yscale("log")
 plt.title("Anomaly Scores from Kitsune's Execution Phase")
 plt.ylabel("RMSE (log scaled)")
 plt.xlabel("Time elapsed [min]")
-figbar=plt.colorbar()
+figbar = plt.colorbar()
 figbar.ax.set_ylabel('Log Probability\n ', rotation=270)
 plt.show()
