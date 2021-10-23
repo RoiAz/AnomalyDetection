@@ -223,5 +223,8 @@ class Loss:
         if type == "L1":
             self.loss_fn = nn.L1Loss()
 
+        if type == "vae":
+            self.loss_fn = nn.L1Loss()
+
     def forward(self, x, y):
         return self.loss_fn(x, y)

@@ -22,13 +22,13 @@ import time
 
 
 # File location
-path = "mirai_medium.pcap" #the pcap, pcapng, or tsv file to process.
+path = "syndos_med.pcap" #the pcap, pcapng, or tsv file to process.
 packet_limit = np.Inf #the number of packets to process
 
 # KitNET params:
 maxAE = 10 #maximum size for any autoencoder in the ensemble layer
 FMgrace = 5000 #the number of instances taken to learn the feature mapping (the ensemble's architecture)
-ADgrace = 6000 #the number of instances used to train the anomaly detector (ensemble itself)
+ADgrace = 50000 #the number of instances used to train the anomaly detector (ensemble itself)
 
 
 
