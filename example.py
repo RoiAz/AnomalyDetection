@@ -74,8 +74,8 @@ from matplotlib import cm
 plt.figure(figsize=(10, 5))
 fig = plt.scatter(range(FMgrace + ADgrace + 1, len(RMSEs)), RMSEs[FMgrace + ADgrace + 1:], s=0.1,
                   c=logProbs[FMgrace + ADgrace + 1:], cmap='RdYlGn')
-print(suspicious_indexes)
-success_rate = resultAccuracy.accuracyrate()
+#print(suspicious_indexes)
+success_rate = res_acc.accuracyrate()
 print(f'success_rate is {success_rate:.3f}.')
 plt.yscale("log")
 plt.title("Anomaly Scores from Kitsune's Execution Phase")
