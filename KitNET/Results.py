@@ -1,31 +1,49 @@
 import pandas as pd
+import numpy as np
+from os import path
 
 
 class resultAccuracy:
-    def __init__(self, labels_csv_doc_path):
-        self.rmse_index_list = []
-        self.label_doc_path = labels_csv_doc_path
-        self.limit = 10
+    def __init__(self, labels_path, skip=None, num_of_rows=None, threshold=10, parse_dates=[1]):
+        if not path.exists(labels_path):
+            raise Exception("path - " + labels_path + " doesn't exists")
+
+        self.labels_df = pd.read_csv(labels_path, skiprows=skip, nrows=num_of_rows, dtype=np.int8,
+                                     parse_dates=parse_dates)
+        print(self.labels_df)
+        print(self.labels_df.shape)
+        self.threshold = threshold
+        self.num_of_success = 0
+        self.num_of_packets = 0
+        self.true_positive = 0   # match - detect the attack
+        self.false_positive = 0  # false alarm - thought the packet is malicious but it isn't
+        self.false_negative = 0  # didn't detect the attack
+        self.true_negative = 0   # match - thought the packet isn't malicious and that's the case
         self.success_rate = 0
-        self.false_negative = 0
-        self.true_negative = 0
 
     def add(self, rmse, index):
-        if rmse >= self.limit:
-            self.rmse_index_list.append(index)
+        is_real_malicious = self.labels_df.at(index)
+        is_predicted_malicious = False
+        self.num_of_packets += 1
+        if rmse >= self.threshold:
+            is_predicted_malicious = True
+        if is_predicted_malicious and is_real_malicious:
+            success = True
+            self.true_positive += 1
+        elif is_predicted_malicious and not is_real_malicious:
+            success = False
+            self.false_positive += 1
+        elif not is_predicted_malicious and is_real_malicious:
+            success = False
+            self.false_negative += 1
+        else:
+            success = True
+            self.true_negative += 1
 
-    def accuracyrate(self):
-        keep_rows = self.rmse_index_list
-        labels_file = pd.read_csv(self.label_doc_path, header=0, skiprows=lambda x: x not in keep_rows)
+        if success:
+            self.num_of_success += 1
+        return success
 
-        for list_member in self.rmse_index_list:
-            tmp_index = 0
-            if labels_file[tmp_index] == 1:
-                self.true_negative = self.true_negative + 1
-            else:
-                self.false_negative = self.false_negative + 1
-            tmp_index = tmp_index + 1
-
-        self.success_rate = self.true_negative / (self.true_negative + self.false_negative)
-
+    def accuracyRate(self):
+        self.success_rate = self.num_of_success / self.num_of_packets
         return self.success_rate

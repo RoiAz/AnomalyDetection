@@ -3,17 +3,6 @@ from Kitsune import Kitsune
 import numpy as np
 import time
 
-##############################################################################
-# Kitsune a lightweight online network intrusion detection system based on an ensemble of autoencoders (kitNET).
-# For more information and citation, please see our NDSS'18 paper: Kitsune: An Ensemble of Autoencoders for Online Network Intrusion Detection
-
-# This script demonstrates Kitsune's ability to incrementally learn, and detect anomalies in recorded a pcap of the Mirai Malware.
-# The demo involves an m-by-n dataset with n=115 dimensions (features), and m=100,000 observations.
-# Each observation is a snapshot of the network's state in terms of incremental damped statistics (see the NDSS paper for more details)
-
-# The runtimes presented in the paper, are based on the C++ implimentation (roughly 100x faster than the python implimentation)
-###################  Last Tested with Anaconda 3.6.3   #######################
-
 # Load Mirai pcap (a recording of the Mirai botnet malware being activated)
 # The first 70,000 observations are clean...
 # print("Unzipping Sample Capture...")
@@ -23,8 +12,13 @@ import time
 
 
 # File location
-path = "syndos_med.pcap.tsv"  # the pcap, pcapng, or tsv file to process.
-labels_path = "SYN_DoS_labels.csv"
+path = "SSDP_Flood_pcap_2610000_2620000_.pcap.pcapng.tsv"  # the pcap, pcapng, or tsv file to process.
+labels_path = r'C:\Users\roiaz\PycharmProjects\AnomalyDetection\SSDP_Flood_labels.csv'
+first_packet = 2610000
+last_packet = 2620000
+skip_rows = range(0, first_packet)
+num_of_rows = last_packet - first_packet
+res_acc = resultAccuracy(labels_path=labels_path, skip=skip_rows, num_of_rows=num_of_rows, threshold=10)
 packet_limit = np.Inf  # the number of packets to process
 
 # KitNET params:
@@ -37,10 +31,9 @@ K = Kitsune(path, packet_limit, maxAE, FMgrace, ADgrace)
 
 print("Running Kitsune:")
 RMSEs = []
-malicious_pckts_index_list = []
+prediction_success_list = []
 i = 0
 start = time.time()
-res_acc = resultAccuracy(labels_path)
 # Here we process (train/execute) each individual packet.
 # In this way, each observation is discarded after performing process() method.
 while True:
@@ -52,7 +45,7 @@ while True:
         break
     # print(rmse)
     RMSEs.append(rmse)
-    res_acc.add(rmse=rmse, index=i)
+    prediction_success_list.append(int(res_acc.add(rmse=rmse, index=i)))
 stop = time.time()
 print("Complete. Time elapsed: " + str(stop - start))
 
@@ -74,8 +67,8 @@ from matplotlib import cm
 plt.figure(figsize=(10, 5))
 fig = plt.scatter(range(FMgrace + ADgrace + 1, len(RMSEs)), RMSEs[FMgrace + ADgrace + 1:], s=0.1,
                   c=logProbs[FMgrace + ADgrace + 1:], cmap='RdYlGn')
-#print(suspicious_indexes)
-success_rate = res_acc.accuracyrate()
+# print(suspicious_indexes)
+success_rate = res_acc.accuracyRate()
 print(f'success_rate is {success_rate:.3f}.')
 plt.yscale("log")
 plt.title("Anomaly Scores from Kitsune's Execution Phase")

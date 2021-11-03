@@ -20,7 +20,7 @@ class EncoderCNN(nn.Module):
             modules.append(
                 nn.Conv1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2, stride=1,
                           dtype=torch.float))
-            # modules.append(nn.BatchNorm1d(channel_list[ci]))
+            modules.append(nn.BatchNorm1d(channel_list[ci]))
             modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
 
@@ -46,8 +46,8 @@ class DecoderCNN(nn.Module):
                 modules.append(
                     nn.ConvTranspose1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2,
                                        stride=1))
-            #  modules.append(nn.BatchNorm1d(channel_list[ci]))
-            modules.append(nn.LeakyReLU(negative_slope=0.05))
+            modules.append(nn.BatchNorm1d(channel_list[ci]))
+         #   modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, h):
@@ -126,9 +126,9 @@ class AutoEncoder(nn.Module):
             self.in_channels = hp["in_channels"]
             self.out_channels = hp["out_channels"]
             self.encoder = EncoderCNN(in_channels=self.in_channels, out_channels=self.out_channels).to(device)
-            #  print(self.encoder)
+      #      print(self.encoder)
             self.decoder = DecoderCNN(in_channels=self.out_channels, out_channels=self.in_channels).to(device)
-            #   print(self.decoder)
+       #     print(self.decoder)
             self.z_dim = hp['z_dim']
             self.features_shape, n_features = self._check_features(n_visible)
             self.mu_a = nn.Linear(n_features, self.z_dim, bias=True)
