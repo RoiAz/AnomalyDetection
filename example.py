@@ -16,7 +16,8 @@ path = "SSDP_Flood_pcap_2610000_2620000_.pcap.pcapng.tsv"  # the pcap, pcapng, o
 labels_path = r'C:\Users\roiaz\PycharmProjects\AnomalyDetection\SSDP_Flood_labels.csv'
 first_packet = 2610000
 last_packet = 2620000
-skip_rows = range(0, first_packet)
+
+skip_rows = range(0, first_packet - 1)
 num_of_rows = last_packet - first_packet
 res_acc = resultAccuracy(labels_path=labels_path, skip=skip_rows, num_of_rows=num_of_rows, threshold=10)
 packet_limit = np.Inf  # the number of packets to process
@@ -43,7 +44,6 @@ while True:
     rmse = K.proc_next_packet()
     if rmse == -1:
         break
-    # print(rmse)
     RMSEs.append(rmse)
     prediction_success_list.append(int(res_acc.add(rmse=rmse, index=i)))
 stop = time.time()
