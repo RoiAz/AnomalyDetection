@@ -1,4 +1,5 @@
 from KitNET.Results import resultAccuracy
+from KitNET.logger import logger
 from Kitsune import Kitsune
 import numpy as np
 import time
@@ -12,14 +13,15 @@ import time
 
 
 # File location
-path = r'C:\Users\roiaz\PycharmProjects\AnomalyDetection\SSDP_Flood_2610000_2620000.pcapng.tsv'  # the pcap, pcapng, or tsv file to process.
-labels_path = r'C:\Users\roiaz\PycharmProjects\AnomalyDetection\SSDP_Flood_labels.csv'
+path = r'C:\Users\roeihers\PycharmProjects\AnomalyDetection\SSDP_Flood_2610000_2620000.pcapng.tsv'  # the pcap, pcapng, or tsv file to process.
+labels_path = r'C:\Users\roeihers\PycharmProjects\AnomalyDetection\SSDP_Flood_labels.csv'
 first_packet = 2610000
 last_packet = 2620000
 
 skip_rows = range(0, first_packet - 1)
 num_of_rows = last_packet - first_packet + 2
 res_acc = resultAccuracy(labels_path=labels_path, skip=skip_rows, num_of_rows=num_of_rows, threshold=10)
+logger = logger("logtest.txt")
 packet_limit = np.Inf  # the number of packets to process
 
 # KitNET params:
@@ -47,7 +49,9 @@ while True:
     if rmse == -1:
         break
     RMSEs.append(rmse)
+    logger.add('packet index' + str(i) + "have rmse of " + str(rmse) )
     prediction_success_list.append(int(res_acc.add(rmse=rmse, index=i)))
+    res_acc.maliciousAlert()
 stop = time.time()
 print("Complete. Time elapsed: " + str(stop - start))
 

@@ -10,9 +10,9 @@ class resultAccuracy:
         labels_df = pd.read_csv(labels_path, skiprows=skip, nrows=num_of_rows, dtype=np.int8, header=None,
                                   usecols=[1])
         self.labels = labels_df.to_numpy(dtype=bool, copy=True).flatten()
-       # print("#"*10)
-        #print(labels_df)
-        #print(self.labels)
+        # print("#"*10)
+        # print(labels_df)
+        # print(self.labels)
         self.threshold = threshold
         self.num_of_success = 0
         self.num_of_packets = 0
@@ -21,6 +21,9 @@ class resultAccuracy:
         self.false_negative = 0  # didn't detect the attack
         self.true_negative = 0  # match - thought the packet isn't malicious and that's the case
         self.success_rate = 0
+        self.malicious_alert = 0
+        self.malicious_count = 0
+        self.verbose = 0
 
     def add(self, rmse, index):
         is_real_malicious = self.labels[index-1]
@@ -28,6 +31,10 @@ class resultAccuracy:
         self.num_of_packets += 1
         if rmse >= self.threshold:
             is_predicted_malicious = True
+            self.malicious_count +=1;
+            if self.malicious_count >= 20 :
+                self.malicious_alert = 1;
+
         if is_predicted_malicious and is_real_malicious:
             success = True
             self.true_positive += 1
@@ -49,3 +56,8 @@ class resultAccuracy:
     def accuracyRate(self):
         self.success_rate = self.num_of_success / self.num_of_packets
         return self.success_rate
+
+    def maliciousAlert(self):
+        if self.malicious_alert == 1 and self.verbose == 1:
+            print('Malicious Alert')
+            self.malicious_alert = 0

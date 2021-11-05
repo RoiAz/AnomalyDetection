@@ -136,6 +136,7 @@ class AutoEncoder(nn.Module):
             self.x_to_h = nn.Linear(self.z_dim, n_features, bias=True)
             if hp["opt"] == "adam":
                 self.optimizer = optim.Adam(self.parameters(), lr=self.lr, betas=hp["betas"])
+           #     print(self.optimizer)
 
     def _check_features(self, in_size):
         device = next(self.parameters()).device
@@ -154,6 +155,8 @@ class AutoEncoder(nn.Module):
         if self.Net == "Kitsune":
             self.input = x
             self.encode_output = sigmoid(numpy.dot(x, self.W) + self.hbias)
+            return self.encode_output
+        #elif self.Net == "PNet":
         else:
             x = torch.tensor(x, dtype=torch.double)
             self.input = torch.reshape(x, (-1,))
@@ -170,6 +173,7 @@ class AutoEncoder(nn.Module):
     def decode(self, x):
         if self.Net == "Kitsune":
             self.decode_output = sigmoid(numpy.dot(x, self.W_prime) + self.vbias)
+       # elif self.Net == "PNet":
         else:
             h = self.x_to_h(x)
             h = h.reshape((-1, *self.features_shape))
@@ -229,4 +233,8 @@ class Loss:
             self.loss_fn = nn.L1Loss()
 
     def forward(self, x, y):
+        # print(x.shape)
+        # print(x)
+        # print(y.shape)
+        # print(y)
         return self.loss_fn(x, y)
