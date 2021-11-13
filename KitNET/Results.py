@@ -9,8 +9,7 @@ class resultAccuracy:
     def __init__(self, labels_path, skip=None, num_of_rows=None, threshold=10):
         if not path.exists(labels_path):
             raise Exception("path - " + labels_path + " doesn't exists")
-        labels_df = pd.read_csv(labels_path, skiprows=skip, nrows=num_of_rows, dtype=np.int8, header=None,
-                                  usecols=[1])
+        labels_df = pd.read_csv(labels_path, skiprows=skip, nrows=num_of_rows, header=None, usecols=[1])
         self.labels = labels_df.to_numpy(dtype=bool, copy=True).flatten()
         # print("#"*10)
         # print(labels_df)
@@ -30,6 +29,10 @@ class resultAccuracy:
 
 
     def add(self, rmse, index):
+        size = self.labels.size
+        if index >= size:
+            print("Index too big cant add to resultAccuracy, index: " + str(index)+ " size: "+ str(size))
+            return 0
         is_real_malicious = self.labels[index-1]
         is_predicted_malicious = False
         self.num_of_packets += 1

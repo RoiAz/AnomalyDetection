@@ -13,12 +13,12 @@ import time
 
 
 # File location
-path = r'C:\Users\roeihers\PycharmProjects\AnomalyDetection\SSDP_Flood_2610000_2620000.pcapng.tsv'  # the pcap, pcapng, or tsv file to process.
-labels_path = r'C:\Users\roeihers\PycharmProjects\AnomalyDetection\SSDP_Flood_labels.csv'
-first_packet = 2610000
-last_packet = 2620000
+path = r'C:\Users\roiaz\PycharmProjects\AnomalyDetection\SSDP_Flood_pcap.pcap'  # the pcap, pcapng, or tsv file to process.
+labels_path = r'C:\Users\roiaz\PycharmProjects\AnomalyDetection\SSDP_Flood_labels.csv'
+first_packet = 1
+last_packet = 4077267
 
-skip_rows = range(0, first_packet - 1)
+skip_rows = range(1, first_packet - 1)
 num_of_rows = last_packet - first_packet + 2
 res_acc = resultAccuracy(labels_path=labels_path, skip=skip_rows, num_of_rows=num_of_rows, threshold=10)
 logger = logger(r'C:\Users\roeihers\PycharmProjects\AnomalyDetection\logtest.txt', big_data_mode=1)
@@ -26,10 +26,10 @@ packet_limit = np.Inf  # the number of packets to process
 
 # KitNET params:
 maxAE = 10  # maximum size for any autoencoder in the ensemble layer
-# FMgrace = 5000  # the number of instances taken to learn the feature mapping (the ensemble's architecture)
-# ADgrace = 50000  # the number of instances used to train the anomaly detector (ensemble itself)
-FMgrace = 100  # the number of instances taken to learn the feature mapping (the ensemble's architecture)
-ADgrace = 1000  # the number of instances used to train the anomaly detector (ensemble itself)
+FMgrace = 5000  # the number of instances taken to learn the feature mapping (the ensemble's architecture)
+ADgrace = 50000  # the number of instances used to train the anomaly detector (ensemble itself)
+# FMgrace = 100  # the number of instances taken to learn the feature mapping (the ensemble's architecture)
+# ADgrace = 1000  # the number of instances used to train the anomaly detector (ensemble itself)
 
 # Build Kitsune
 K = Kitsune(path, packet_limit, maxAE, FMgrace, ADgrace)
