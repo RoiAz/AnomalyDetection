@@ -47,7 +47,7 @@ class DecoderCNN(nn.Module):
                     nn.ConvTranspose1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2,
                                        stride=1))
             modules.append(nn.BatchNorm1d(channel_list[ci]))
-         #   modules.append(nn.LeakyReLU(negative_slope=0.05))
+         #  modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, h):

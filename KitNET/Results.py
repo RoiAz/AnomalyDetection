@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from os import path
 
+from KitNET.logger import logger
+
 
 class resultAccuracy:
     def __init__(self, labels_path, skip=None, num_of_rows=None, threshold=10):
@@ -24,6 +26,8 @@ class resultAccuracy:
         self.malicious_alert = 0
         self.malicious_count = 0
         self.verbose = 0
+        self.logger = logger(r'C:\Users\roeihers\PycharmProjects\AnomalyDetection\accuracy.txt', big_data_mode=1)
+
 
     def add(self, rmse, index):
         is_real_malicious = self.labels[index-1]
@@ -51,6 +55,7 @@ class resultAccuracy:
         if success:
             self.num_of_success += 1
         self.success_rate = self.num_of_success / self.num_of_packets
+        self.logger.add_rate(self.success_rate, 'success_rate')
         return self.success_rate
 
     def accuracyRate(self):
@@ -60,4 +65,8 @@ class resultAccuracy:
     def maliciousAlert(self):
         if self.malicious_alert == 1 and self.verbose == 1:
             print('Malicious Alert')
+            self.logger.add_rate(self.success_rate, 'Malicious Alert')
             self.malicious_alert = 0
+
+    def print_rate_to_file(self):
+        self.logger.print_to_file()

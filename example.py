@@ -21,7 +21,7 @@ last_packet = 2620000
 skip_rows = range(0, first_packet - 1)
 num_of_rows = last_packet - first_packet + 2
 res_acc = resultAccuracy(labels_path=labels_path, skip=skip_rows, num_of_rows=num_of_rows, threshold=10)
-logger = logger("logtest.txt")
+logger = logger(r'C:\Users\roeihers\PycharmProjects\AnomalyDetection\logtest.txt', big_data_mode=1)
 packet_limit = np.Inf  # the number of packets to process
 
 # KitNET params:
@@ -49,7 +49,7 @@ while True:
     if rmse == -1:
         break
     RMSEs.append(rmse)
-    logger.add('packet index' + str(i) + "have rmse of " + str(rmse) )
+    logger.add_packet(i, rmse)
     prediction_success_list.append(int(res_acc.add(rmse=rmse, index=i)))
     res_acc.maliciousAlert()
 stop = time.time()
@@ -62,7 +62,8 @@ benignSample = np.log(RMSEs[FMgrace + ADgrace + 1:100000])
 # benignSample = np.log(RMSEs[FMgrace+ADgrace+1])
 # print(10*"$")
 # print(benignSample)
-
+logger.print_to_file()
+res_acc.print_rate_to_file()
 logProbs = norm.logsf(np.log(RMSEs), np.mean(benignSample), np.std(benignSample))
 
 # plot the RMSE anomaly scores
