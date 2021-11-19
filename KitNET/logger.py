@@ -9,6 +9,8 @@ class logger:
         self.loglist = []
         self.textfile_path = filename_path
         self.big_dataset_mode = big_data_mode #if using big dataset put on 1
+      #  self.textfile = open(self.textfile_path, "w")
+
 
     def add(self, message):
         if (self.big_dataset_mode == 0) or ( (self.big_dataset_counter % 1000) == 0):
@@ -34,7 +36,6 @@ class logger:
             self.big_dataset_counter+=1
     def print_to_file(self):
         print('printing')
-        textfile = open(self.textfile_path, "w")
         for element in self.loglist:
-            textfile.write(element + "\n")
-        textfile.close()
+            self.textfile.write(element + "\n")
+        self.textfile.close()

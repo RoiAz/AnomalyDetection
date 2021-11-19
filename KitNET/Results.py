@@ -7,6 +7,7 @@ from KitNET.logger import logger
 
 class resultAccuracy:
     def __init__(self, labels_path, skip=None, num_of_rows=None, threshold=10):
+        self.mal_cnt = 0
         if not path.exists(labels_path):
             raise Exception("path - " + labels_path + " doesn't exists")
         labels_df = pd.read_csv(labels_path, skiprows=skip, nrows=num_of_rows, header=None, usecols=[1])
@@ -25,7 +26,7 @@ class resultAccuracy:
         self.malicious_alert = 0
         self.malicious_count = 0
         self.verbose = 0
-        self.logger = logger(r'C:\Users\roeihers\PycharmProjects\AnomalyDetection\accuracy.txt', big_data_mode=1)
+#        self.logger = logger(r'C:\Users\roeihers\PycharmProjects\AnomalyDetection\accuracy.txt', big_data_mode=1)
 
 
     def add(self, rmse, index):
@@ -34,13 +35,15 @@ class resultAccuracy:
             print("Index too big cant add to resultAccuracy, index: " + str(index)+ " size: "+ str(size))
             return 0
         is_real_malicious = self.labels[index-1]
+        if is_real_malicious:
+            self.mal_cnt += 1
         is_predicted_malicious = False
         self.num_of_packets += 1
         if rmse >= self.threshold:
             is_predicted_malicious = True
-            self.malicious_count +=1;
-            if self.malicious_count >= 20 :
-                self.malicious_alert = 1;
+            self.malicious_count +=1
+            if self.malicious_count >= 20:
+                self.malicious_alert = 1
 
         if is_predicted_malicious and is_real_malicious:
             success = True
@@ -58,18 +61,23 @@ class resultAccuracy:
         if success:
             self.num_of_success += 1
         self.success_rate = self.num_of_success / self.num_of_packets
-        self.logger.add_rate(self.success_rate, 'success_rate')
+   #     self.logger.add_rate(self.success_rate, 'success_rate')
         return self.success_rate
 
     def accuracyRate(self):
         self.success_rate = self.num_of_success / self.num_of_packets
         return self.success_rate
 
+    def truePositiveAccuracyRate(self):
+        return self.true_positive / self.mal_cnt
+
+
     def maliciousAlert(self):
         if self.malicious_alert == 1 and self.verbose == 1:
             print('Malicious Alert')
-            self.logger.add_rate(self.success_rate, 'Malicious Alert')
+         #   self.logger.add_rate(self.success_rate, 'Malicious Alert')
             self.malicious_alert = 0
 
     def print_rate_to_file(self):
-        self.logger.print_to_file()
+        pass
+        #self.logger.print_to_file()

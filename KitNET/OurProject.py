@@ -4,8 +4,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-
-
 hp = hyperparms()
 rng = numpy.random.RandomState(1234)
 
@@ -19,13 +17,13 @@ class EncoderCNN(nn.Module):
         for ci in range(1, len(channel_list)):
             modules.append(
                 nn.Conv1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2, stride=1,
-                          dtype=torch.float))
-            modules.append(nn.BatchNorm1d(channel_list[ci]))
+                          dtype=torch.double))
+            modules.append(nn.BatchNorm1d(channel_list[ci], dtype=torch.double))
             modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, x):
-        x = torch.tensor(x, dtype=torch.float)
+        x = torch.tensor(x, dtype=torch.double, requires_grad=True)
         x = torch.reshape(x, (-1,))
         x = torch.reshape(x, (1, 1, x.shape[0]))
         return self.cnn(x)
@@ -41,13 +39,13 @@ class DecoderCNN(nn.Module):
             if ci == len(channel_list) - 1:
                 modules.append(
                     nn.ConvTranspose1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2,
-                                       stride=1))
+                                       stride=1, dtype=torch.double))
             else:
                 modules.append(
                     nn.ConvTranspose1d(in_channels=channel_list[ci - 1], out_channels=channel_list[ci], kernel_size=2,
-                                       stride=1))
-            modules.append(nn.BatchNorm1d(channel_list[ci]))
-         #  modules.append(nn.LeakyReLU(negative_slope=0.05))
+                                       stride=1, dtype=torch.double))
+            modules.append(nn.BatchNorm1d(channel_list[ci], dtype=torch.double))
+        #  modules.append(nn.LeakyReLU(negative_slope=0.05))
         self.cnn = nn.Sequential(*modules)
 
     def forward(self, h):
@@ -126,23 +124,23 @@ class AutoEncoder(nn.Module):
             self.in_channels = hp["in_channels"]
             self.out_channels = hp["out_channels"]
             self.encoder = EncoderCNN(in_channels=self.in_channels, out_channels=self.out_channels).to(device)
-      #      print(self.encoder)
+            #      print(self.encoder)
             self.decoder = DecoderCNN(in_channels=self.out_channels, out_channels=self.in_channels).to(device)
-       #     print(self.decoder)
+            #     print(self.decoder)
             self.z_dim = hp['z_dim']
             self.features_shape, n_features = self._check_features(n_visible)
-            self.mu_a = nn.Linear(n_features, self.z_dim, bias=True)
-            self.log_sigma = nn.Linear(n_features, self.z_dim, bias=True)
-            self.x_to_h = nn.Linear(self.z_dim, n_features, bias=True)
+            self.mu_a = nn.Linear(n_features, self.z_dim, bias=True,dtype=torch.double)
+            self.log_sigma = nn.Linear(n_features, self.z_dim, bias=True,dtype=torch.double)
+            self.x_to_h = nn.Linear(self.z_dim, n_features, bias=True,dtype=torch.double)
             if hp["opt"] == "adam":
                 self.optimizer = optim.Adam(self.parameters(), lr=self.lr, betas=hp["betas"])
-           #     print(self.optimizer)
+        #     print(self.optimizer)
 
     def _check_features(self, in_size):
         device = next(self.parameters()).device
         with torch.no_grad():
             # Make sure encoder and decoder are compatible
-            x = torch.randn(1, in_size, device=device, dtype=torch.float)
+            x = torch.randn(1, in_size, device=device, dtype=torch.double)
             h = self.encoder(x)
             xr = self.decoder(h)
             #  print(x.shape)
@@ -152,13 +150,14 @@ class AutoEncoder(nn.Module):
             return h.shape[1:], torch.numel(h) // h.shape[0]
 
     def encode(self, x):
+     #   print(x)
         if self.Net == "Kitsune":
             self.input = x
             self.encode_output = sigmoid(numpy.dot(x, self.W) + self.hbias)
             return self.encode_output
-        #elif self.Net == "PNet":
+        # elif self.Net == "PNet":
         else:
-            x = torch.tensor(x, dtype=torch.double)
+            x = torch.tensor(x, dtype=torch.double, requires_grad=True)
             self.input = torch.reshape(x, (-1,))
             init_z = self.encoder.forward(x)
             init_z = init_z.view(init_z.size(0), -1)
@@ -173,7 +172,7 @@ class AutoEncoder(nn.Module):
     def decode(self, x):
         if self.Net == "Kitsune":
             self.decode_output = sigmoid(numpy.dot(x, self.W_prime) + self.vbias)
-       # elif self.Net == "PNet":
+        # elif self.Net == "PNet":
         else:
             h = self.x_to_h(x)
             h = h.reshape((-1, *self.features_shape))
@@ -219,22 +218,23 @@ class AutoEncoder(nn.Module):
 
 
 class Loss:
-    def __init__(self, type):
-        if type == "Krmse":
+    def __init__(self, exp_loss):
+        self.exp_loss = exp_loss
+
+        if exp_loss == "Krmse":
             self.loss_fn = lambda x, z: numpy.sqrt(((x - z) ** 2).mean())
-
-        if type == "CE":
+        elif exp_loss == "L1":
+            self.loss_fn = nn.L1Loss()
+        elif exp_loss == "MSE":
+            self.loss_fn = nn.MSELoss()
+        elif exp_loss == "CE":
             self.loss_fn = nn.CrossEntropyLoss()
-
-        if type == "L1":
-            self.loss_fn = nn.L1Loss()
-
-        if type == "vae":
-            self.loss_fn = nn.L1Loss()
+        else:
+            print("No such loss function: " + exp_loss)
+            exit()
 
     def forward(self, x, y):
-        # print(x.shape)
-        # print(x)
-        # print(y.shape)
-        # print(y)
-        return self.loss_fn(x, y)
+        if self.exp_loss == "CE":
+            return self.loss_fn(torch.reshape(x, (len(x), 1)), y)
+        else:
+            return self.loss_fn(x, y)
